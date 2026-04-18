@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 """Cooperative Codenames — 2-player CLI game."""
 
+from enum import StrEnum
 import json
 import random
 import sys
 import uuid
+import logging
+
 from pathlib import Path
+from typing import Optional
+from dataclasses import dataclass
+from common.logger import setup_logger
+from common.constants import WordCategory
+
 
 DATA_DIR = Path(__file__).parent
 WORDS_FILE = DATA_DIR / "words.txt"
 GAMES_DIR = DATA_DIR / "games"
 CONFIG_FILE = DATA_DIR / "config.json"
-
-TEAM_COUNT = 9
-BYSTANDER_COUNT = 7
-ASSASSIN_COUNT = 1
-BOARD_SIZE = 25
 
 # ANSI color codes
 GREEN = "\033[92m"
@@ -24,59 +27,92 @@ DIM = "\033[90m"
 RESET = "\033[0m"
 YELLOW = "\033[93m"
 
+@dataclass
+class GameConfig:
+    board_size: int = 25
+    guess_rounds: int = 5
+    team_words: int = 9
+    bystander_words: int = 7
+    assassin_words: int = 1
 
-def load_config():
-    if CONFIG_FILE.exists():
-        return json.loads(CONFIG_FILE.read_text())
-    return {}
+@dataclass
+class ChatMessage:
+    name: str
+    msg: str
+
+class GameStatus(StrEnum):
+    ACTIVE = "active"
+    LOST_GUESSES = "lost — out of guesses"
+    LOST_ASSASSIN = "lost — assassin"
+    WON = "won"
+
+class Role(StrEnum):
+    SPYMASTER = "spymaster"
+    GUESSER = "guesser"
+
+@dataclass
+class Clue:
+    clue: str
+    number: int
+
+@dataclass
+class GameState:
+    id: str
+    status: GameStatus
+    words: list[str]
+    key: dict[str]
+    revealed: list[str] # TODO: Update to dict
+    clues: list[Clue]
+    turn: Role
+    rounds_remaining: int
+    guesses_remaining: int
+    roles_taken: list[Role]
+    players: dict[Role, str]
+    log: list[str]
+    chat: list[ChatMessage]
 
 
-def get_max_guess_rounds():
-    return load_config().get("max_guess_rounds", 5)
-
+setup_logger()
+logger = logging.getLogger(__name__)
 
 def load_words():
     return [w.strip() for w in WORDS_FILE.read_text().splitlines() if w.strip()]
 
+def new_game(id: Optional[str] = None, config: Optional[GameConfig] = None):
+    # TODO: Validate config values (i.e. team_words+bystander_words+assassin_words = boardsize). If it fails throw an error
+    if not config:
+        config = GameConfig()
 
-def new_game(custom_id=None):
-    words = random.sample(load_words(), BOARD_SIZE)
-    indices = list(range(BOARD_SIZE))
+    words = random.sample(load_words(), config.board_size)
+    indices = list(range(config.board_size))
     random.shuffle(indices)
 
     key = {}
-    for i in indices[:TEAM_COUNT]:
-        key[i] = "TEAM"
-    for i in indices[TEAM_COUNT:TEAM_COUNT + BYSTANDER_COUNT]:
-        key[i] = "BYSTANDER"
-    for i in indices[TEAM_COUNT + BYSTANDER_COUNT:TEAM_COUNT + BYSTANDER_COUNT + ASSASSIN_COUNT]:
-        key[i] = "ASSASSIN"
-    for i in indices[TEAM_COUNT + BYSTANDER_COUNT + ASSASSIN_COUNT:]:
-        key[i] = "BYSTANDER"
+    for i in indices[:config.team_words]:
+        key[i] = WordCategory.TEAM
+    for i in indices[config.team_words:config.team_words + config.bystander_words]:
+        key[i] = WordCategory.BYSTANDER
+    for i in indices[config.team_words + config.bystander_words:config.team_words + config.bystander_words + config.assassin_words]:
+        key[i] = WordCategory.ASSASSIN
+    for i in indices[config.team_words + config.bystander_words + config.assassin_words:]:
+        key[i] = WordCategory.BYSTANDER
 
-    max_rounds = get_max_guess_rounds()
-    game_id = custom_id or uuid.uuid4().hex[:8]
-    state = {
-        "id": game_id,
-        "words": words,
-        "key": {str(k): v for k, v in key.items()},
-        "revealed": [],
-        "guesses_left": max_rounds,
-        "status": "active",
-        "clues": [],
-        # Turn tracking: "spymaster" = waiting for clue, "guesser" = waiting for guesses
-        "turn": "spymaster",
-        # How many guesses the guesser has left for the current clue
-        "clue_guesses_left": 0,
-        # Which roles have been claimed
-        "roles_taken": [],
-        # Player names: {"spymaster": "Alice", "guesser": "Bob"}
-        "players": {},
-        # Action log entries
-        "log": [],
-        # Chat messages: [{"name": "Alice", "msg": "hello"}, ...]
-        "chat": [],
-    }
+    rounds = config.guess_rounds
+    game_id = id or uuid.uuid4().hex[:8]
+    state = GameState(id=game_id,
+        status=GameStatus.ACTIVE,
+        words=words,
+        key={str(k): v for k, v in key.items()},
+        revealed=[],
+        clues=[],
+        turn=Role.SPYMASTER,
+        rounds_remaining=rounds,
+        guesses_remaining=0,
+        roles_taken=[],
+        players={},
+        log=[],
+        chat=[]
+    )
     save_game(state)
     return state
 

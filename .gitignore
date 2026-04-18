@@ -1,9 +1,11 @@
 # Env / secrets
 .env
+.venv/
 
-# Build pycache
+# Local Build
 __pycache__/
 *.pyc
+codenames.egg-info/
 
 # VS Code
 .vscode/*

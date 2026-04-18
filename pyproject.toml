@@ -1,0 +1,6 @@
+[project]
+name = "codenames"
+version = "0.1.0"
+
+[tool.setuptools.packages.find]
+include= ["common", "server", "client"]

@@ -2,6 +2,6 @@
   "board_size": 25,
   "guess_rounds": 5,
   "team_words": 9,
-  "bystander_words": 7,
+  "bystander_words": 15,
   "assassin_words": 1
 }

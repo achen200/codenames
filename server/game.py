@@ -3,22 +3,13 @@
 
 from enum import StrEnum
 import json
-import random
 import sys
-import uuid
-import logging
 
 from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass
-from common.logger import setup_logger
 from common.constants import WordCategory
-
-
-DATA_DIR = Path(__file__).parent
-WORDS_FILE = DATA_DIR / "words.txt"
-GAMES_DIR = DATA_DIR / "games"
-CONFIG_FILE = DATA_DIR / "config.json"
+from dataclass_wizard import JSONWizard
+from __future__ import annotations
 
 # ANSI color codes
 GREEN = "\033[92m"
@@ -56,12 +47,17 @@ class Clue:
     number: int
 
 @dataclass
-class GameState:
+class Cell:
+    word: str
+    category: WordCategory
+    revealed: bool = False
+
+@dataclass
+class GameState(JSONWizard):
     id: str
     status: GameStatus
-    words: list[str]
-    key: dict[str]
-    revealed: list[str] # TODO: Update to dict
+    board: list[Cell]
+
     clues: list[Clue]
     turn: Role
     rounds_remaining: int
@@ -71,78 +67,52 @@ class GameState:
     log: list[str]
     chat: list[ChatMessage]
 
+class Game:
+    def __init__(self, config: GameConfig, state: GameState):
+        self.config = config
+        self.state = state
 
-setup_logger()
-logger = logging.getLogger(__name__)
+    ### Read only functions ###
+    def board(self) -> list[Cell]:
+        '''
+        Gets current board
+        '''
+        return self.state.board
 
-def load_words():
-    return [w.strip() for w in WORDS_FILE.read_text().splitlines() if w.strip()]
+    def cell(self, ind: int) -> Cell:
+        '''
+        Gets specified cell in board
+        '''
+        board = self.board()
+        if ind >= len(board):
+            raise IndexError(f"Index {ind} is out of bounds for board length {len(board)}")
+        return board[ind] 
+    
+    ### Mutating Functions ###
+    def reveal(self, ind: int) -> WordCategory:
+        cell = self.cell(ind)
+        if cell.revealed:
+            raise ValueError(f"Cell: {ind} word: {cell.word} already revealed")
+        cell.revealed = True
+        return cell.category
 
-def new_game(id: Optional[str] = None, config: Optional[GameConfig] = None):
-    # TODO: Validate config values (i.e. team_words+bystander_words+assassin_words = boardsize). If it fails throw an error
-    if not config:
-        config = GameConfig()
+    def add_clue(self, clue: Clue) -> None:
+        self.state.clues.append(clue)
+    
+    def set_status(self, status: GameStatus) -> None:
+        self.state.status = status
 
-    words = random.sample(load_words(), config.board_size)
-    indices = list(range(config.board_size))
-    random.shuffle(indices)
+    ### Chat/Game History ###
+    def add_chat(self, msg: ChatMessage) -> None:
+        self.state.chat.append(msg)
 
-    key = {}
-    for i in indices[:config.team_words]:
-        key[i] = WordCategory.TEAM
-    for i in indices[config.team_words:config.team_words + config.bystander_words]:
-        key[i] = WordCategory.BYSTANDER
-    for i in indices[config.team_words + config.bystander_words:config.team_words + config.bystander_words + config.assassin_words]:
-        key[i] = WordCategory.ASSASSIN
-    for i in indices[config.team_words + config.bystander_words + config.assassin_words:]:
-        key[i] = WordCategory.BYSTANDER
-
-    rounds = config.guess_rounds
-    game_id = id or uuid.uuid4().hex[:8]
-    state = GameState(id=game_id,
-        status=GameStatus.ACTIVE,
-        words=words,
-        key={str(k): v for k, v in key.items()},
-        revealed=[],
-        clues=[],
-        turn=Role.SPYMASTER,
-        rounds_remaining=rounds,
-        guesses_remaining=0,
-        roles_taken=[],
-        players={},
-        log=[],
-        chat=[]
-    )
-    save_game(state)
-    return state
+    def log_action(self, message: str) -> None:
+        self.state.log.append(message)
+    
 
 
-def save_game(state):
-    GAMES_DIR.mkdir(exist_ok=True)
-    path = GAMES_DIR / f"{state['id']}.json"
-    path.write_text(json.dumps(state, indent=2))
 
 
-class GameNotFound(Exception):
-    pass
-
-
-def load_game(game_id):
-    path = GAMES_DIR / f"{game_id}.json"
-    if not path.exists():
-        raise GameNotFound(f"Game '{game_id}' not found.")
-    return json.loads(path.read_text())
-
-
-def delete_game(game_id):
-    path = GAMES_DIR / f"{game_id}.json"
-    if path.exists():
-        path.unlink()
-
-
-def team_words_remaining(state):
-    return [i for i in range(BOARD_SIZE)
-            if state["key"][str(i)] == "TEAM" and i not in state["revealed"]]
 
 
 def colorize(text, role, revealed=False):

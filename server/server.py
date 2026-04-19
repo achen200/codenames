@@ -6,7 +6,7 @@ import sys
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from server.codenames import (
+from server.game import (
     new_game, load_game, save_game, team_words_remaining,
     end_guesser_turn, GameNotFound, BOARD_SIZE, GAMES_DIR, delete_game,
 )

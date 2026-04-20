@@ -8,6 +8,7 @@ from dataclass_wizard import JSONWizard
 
 from common.constants import WordCategory
 from common.logger import setup_logger
+from common.types import GameNotFound
 from server.game import Cell, Game, GameState, GameStatus, Role
 from server.game import GameConfig
 from typing import Optional
@@ -15,16 +16,12 @@ from typing import Optional
 setup_logger()
 logger = logging.getLogger(__name__)
 
-class GameNotFound(Exception):
-    # TODO: move this into commons
-    pass
-
 @dataclass
-class Save(JSONWizard):
+class SaveData(JSONWizard):
     config: GameConfig
     state: GameState
 
-class GameEngine:
+class GameRepository:
     def __init__(self, games_dir: str, words_path: str):
         self.games_dir = games_dir
         self.words_path = words_path
@@ -47,7 +44,6 @@ class GameEngine:
             turn=Role.SPYMASTER,
             rounds_remaining=config.guess_rounds,
             guesses_remaining=0,
-            roles_taken=[],
             players={},
             log=[],
             chat=[]
@@ -61,19 +57,22 @@ class GameEngine:
         if not path.exists():
             raise GameNotFound(f"Game '{game_id} not found'")
 
-        data = Save.from_json(path.read_text())
+        data = SaveData.from_json(path.read_text())
         logger.debug("Loaded game: %s", pformat(data))
         return Game(data.config, data.state)
 
     def save_game(self, game: Game) -> None:
-        self.games_dir.mkdir(exists_ok=True)
+        self.games_dir.mkdir(exist_ok=True)
         path = self._get_gamefile_path(game.state.id)
-        data = Save(game.config, game.state)
+        data = SaveData(game.config, game.state)
         path.write_text(data.to_json(indent=2))
 
     def delete_game(self, game_id: str) -> None:
         path = self._get_gamefile_path(game_id)
         path.unlink(missing_ok=True)
+
+    def exists(self, game_id: str) -> bool:
+        return self._get_gamefile_path(game_id).exists()
 
     def _load_words(self) -> list[str]:
         words = []

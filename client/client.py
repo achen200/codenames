@@ -5,8 +5,8 @@ import sys
 import argparse
 import httpx
 
-from config import CLIConfig, CONFIG_PATH, load_config, reset_config, save_config
-from display import (
+from client.config import CLIConfig, CONFIG_PATH, load_config, reset_config, save_config
+from client.display import (
     render_board, print_status, print_clues,
     print_error, print_success, print_warning
 )

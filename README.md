@@ -11,7 +11,54 @@ The project ships:
 - A **CLI** client (`codenames`) for one-shot commands.
 - A **curses TUI** client (`codenames-tui`) for an interactive board view.
 
----
+
+## Quick Start
+
+### Prerequisites
+
+- Python **3.11+** 
+
+### Installation
+
+Install Python **3.11+** if you don't already have it:
+
+- **macOS:** `brew install python@3.11`
+- **Debian / Ubuntu:** `sudo apt install python3.11 python3.11-venv`
+
+- **Windows:** `winget install Python.Python.3.11` or the installer from [python.org](https://www.python.org/downloads/)
+
+If your OS package manager doesn't ship Python 3.11 use a runtime manager such as [`mise`](https://mise.jdx.dev/):
+```bash
+curl https://mise.run | sh
+echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc && exec bash
+mise use -g python@3.11
+```
+
+Create a virtual environment in project root:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+### Run
+
+```bash
+# Run the server (auth required by default)
+python3 -m server.main --token devtoken
+
+# Configure the client (one-time, in another terminal — also activate the venv)
+codenames configure --host localhost:5000 --token devtoken
+
+# Play using TUI
+codenames-tui
+
+# Or play via CLI
+codenames new
+codenames join <game_id> --name anthony --role spymaster
+codenames join <game_id> --name emily   --role guesser
+```
 
 ## Architecture
 
@@ -198,26 +245,6 @@ stateDiagram-v2
 
 ---
 
-## Quick Start
-
-```bash
-# Install (from the repo root)
-pip install -e .
-
-# Run the server (auth required by default)
-python -m server.main --token devtoken
-
-# Configure the client (one-time)
-codenames configure --host localhost:5000 --token devtoken
-
-# Play (in two terminals / on two machines)
-codenames new
-codenames join <game_id> --name alice --role spymaster
-codenames join <game_id> --name bob   --role guesser
-
-# Or use the interactive TUI
-codenames-tui
-```
 
 ### HTTP API summary
 

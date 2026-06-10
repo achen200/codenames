@@ -1,0 +1,21 @@
+# Code owners for the codenames repository.
+#
+# These owners will be the default reviewers for everything in the repo
+# and, when "Require review from Code Owners" is enabled in the branch
+# protection rules, are the only accounts whose approval can satisfy that
+# requirement.
+#
+# Syntax: <pattern>  <owner1> <owner2> ...
+# Order matters — the LAST matching pattern wins.
+# Docs: https://docs.github.com/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo.
+# Approval from EITHER owner satisfies the "Require review from Code Owners" rule.
+*                   @achen200 @eweed001
+
+# --- Examples for finer-grained ownership (uncomment and edit as needed) ---
+# /server/           @achen200
+# /client/           @achen200
+# /common/           @achen200
+# *.md               @achen200
+# /.github/          @achen200

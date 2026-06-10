@@ -7,7 +7,7 @@
 #
 # Syntax: <pattern>  <owner1> <owner2> ...
 # Order matters — the LAST matching pattern wins.
-# Docs: https://docs.github.com/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default owners for everything in the repo.
 # Approval from EITHER owner satisfies the "Require review from Code Owners" rule.

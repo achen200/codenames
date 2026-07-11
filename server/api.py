@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from common.constants import GAMES_DIR, WORDS_PATH
+from common.constants import GAMES_DIR, WORDS_PATH, ApiEndpoints
 from common.types import Clue, GameAlreadyOver, GameNotFound, InvalidAction, Role, WrongTurn
 from server.repository import GameRepository
 from server.service import GameService
@@ -56,7 +56,7 @@ def handle_service_error(e: Exception) -> None:
 ##### Router #####
 router = APIRouter(dependencies=[Depends(verify_token)])
 
-@router.post("/games", status_code=201)
+@router.post(ApiEndpoints.GAMES, status_code=201)
 def new_game(body: NewGameRequest, service: GameService = Depends(get_service)):
     try:
         game = service.new_game(body.game_id)
@@ -64,14 +64,14 @@ def new_game(body: NewGameRequest, service: GameService = Depends(get_service)):
     except Exception as e:
         handle_service_error(e)
 
-@router.get("/games/{game_id}")
+@router.get(ApiEndpoints.GAME)
 def get_game(game_id: str, service: GameService = Depends(get_service)):
     try:
         return service.get_game(game_id)
     except Exception as e:
         handle_service_error(e)
 
-@router.delete("/games/{game_id}")
+@router.delete(ApiEndpoints.GAME)
 def delete_game(game_id: str, service: GameService = Depends(get_service)):
     try:
         service.delete_game(game_id)
@@ -79,14 +79,14 @@ def delete_game(game_id: str, service: GameService = Depends(get_service)):
     except Exception as e:
         handle_service_error(e)
 
-@router.post("/games/{game_id}/join")
+@router.post(ApiEndpoints.JOIN)
 def join_game(game_id: str, body: JoinRequest, service: GameService = Depends(get_service)):
     try:
         return service.join_game(game_id, body.name, body.role)
     except Exception as e:
         handle_service_error(e)
 
-@router.post("/games/{game_id}/clue")
+@router.post(ApiEndpoints.CLUE)
 def give_clue(game_id: str, body: ClueRequest, service: GameService = Depends(get_service)):
     try:
         service.give_clue(game_id, Clue(body.word, body.number))
@@ -94,21 +94,21 @@ def give_clue(game_id: str, body: ClueRequest, service: GameService = Depends(ge
     except Exception as e:
         handle_service_error(e)
 
-@router.post("/games/{game_id}/guess")
+@router.post(ApiEndpoints.GUESS)
 def make_guess(game_id: str, body: GuessRequest, service: GameService = Depends(get_service)):
     try:
         return service.make_guess(game_id, body.word)
     except Exception as e:
         handle_service_error(e)
 
-@router.post("/games/{game_id}/pass")
+@router.post(ApiEndpoints.PASS)
 def pass_turn(game_id: str, service: GameService = Depends(get_service)):
     try:
         return service.pass_turn(game_id)
     except Exception as e:
         handle_service_error(e)
 
-@router.post("/games/{game_id}/chat")
+@router.post(ApiEndpoints.CHAT)
 def send_chat(game_id: str, body: ChatRequest, service: GameService = Depends(get_service)):
     try:
         service.send_chat(game_id, body.name, body.msg)

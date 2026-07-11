@@ -9,7 +9,7 @@ from typing import Optional
 
 import httpx
 
-from common.constants import WordCategory
+from common.constants import ApiEndpoints, WordCategory
 from common.types import Role
 from client.config import CLIConfig, load_config, save_config
 
@@ -26,12 +26,13 @@ class Screen(Enum):
     GAME = auto()
 
 
-##### API #####
+##### API ##### TODO: Maybe separate this into a separate file
 class CodenamesClient:
     def __init__(self, config: CLIConfig):
         self.config = config
         self._make_client()
 
+    # TODO: make _make_client take in config
     def _make_client(self):
         self.client = httpx.Client(
             base_url=f"http://{self.config.host}",
@@ -43,9 +44,10 @@ class CodenamesClient:
         self.client.close()
         self._make_client()
 
+    # TODO: Maybe have data["state"] as a constant/helper function
     def get_game(self) -> Optional[dict]:
         try:
-            r = self.client.get(f"/games/{self.config.game_id}")
+            r = self.client.get(ApiEndpoints.game(self.config.game_id))
             r.raise_for_status()
             data = r.json()
             return data["state"]
@@ -55,7 +57,7 @@ class CodenamesClient:
 
     def create_game(self, game_id: Optional[str]) -> tuple[bool, str]:
         try:
-            r = self.client.post("/games", json={"game_id": game_id or None})
+            r = self.client.post(ApiEndpoints.GAMES, json={"game_id": game_id or None})
             r.raise_for_status()
             return True, r.json()["id"]
         except httpx.HTTPStatusError as e:
@@ -63,9 +65,10 @@ class CodenamesClient:
         except Exception as e:
             return False, str(e)
 
+
     def join_game(self, game_id: str, name: str, role: Role) -> tuple[bool, str]:
         try:
-            r = self.client.post(f"/games/{game_id}/join", json={
+            r = self.client.post(ApiEndpoints.join(game_id), json={
                 "name": name,
                 "role": role.value,
             })
@@ -78,7 +81,7 @@ class CodenamesClient:
 
     def guess(self, word: str) -> tuple[bool, str]:
         try:
-            r = self.client.post(f"/games/{self.config.game_id}/guess", json={"word": word})
+            r = self.client.post(ApiEndpoints.guess(self.config.game_id), json={"word": word})
             r.raise_for_status()
             return True, ""
         except httpx.HTTPStatusError as e:
@@ -86,7 +89,7 @@ class CodenamesClient:
 
     def clue(self, word: str, number: int) -> tuple[bool, str]:
         try:
-            r = self.client.post(f"/games/{self.config.game_id}/clue", json={
+            r = self.client.post(ApiEndpoints.give_clue(self.config.game_id), json={
                 "word": word,
                 "number": number,
             })
@@ -97,7 +100,7 @@ class CodenamesClient:
 
     def pass_turn(self) -> tuple[bool, str]:
         try:
-            r = self.client.post(f"/games/{self.config.game_id}/pass")
+            r = self.client.post(ApiEndpoints.pass_turn(self.config.game_id))
             r.raise_for_status()
             return True, ""
         except httpx.HTTPStatusError as e:
@@ -105,7 +108,7 @@ class CodenamesClient:
 
     def chat(self, msg: str) -> tuple[bool, str]:
         try:
-            r = self.client.post(f"/games/{self.config.game_id}/chat", json={
+            r = self.client.post(ApiEndpoints.chat(self.config.game_id), json={
                 "name": self.config.name,
                 "msg": msg,
             })
